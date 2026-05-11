@@ -19,7 +19,8 @@ from sklearn.preprocessing import StandardScaler
 import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+import matplotlib
+matplotlib.use("Agg")
 
 # ─────────────────────────────────────────
 # 1. GENERATE SYNTHETIC DATA
@@ -157,7 +158,7 @@ def plot_confusion_matrix(name, y_test, y_pred):
     plt.xlabel("Predicted")
     plt.tight_layout()
     plt.savefig(f"confusion_matrix_{name.replace(' ', '_').lower()}.png", dpi=150)
-    plt.show()
+    # plt.show()
     print(f"Saved: confusion_matrix_{name.replace(' ', '_').lower()}.png")
 
 
@@ -174,7 +175,7 @@ def plot_feature_importance(name, model, feature_names):
     plt.title(f"Feature Importances — {name}")
     plt.tight_layout()
     plt.savefig(f"feature_importance_{name.replace(' ', '_').lower()}.png", dpi=150)
-    plt.show()
+    # plt.show()
     print(f"Saved: feature_importance_{name.replace(' ', '_').lower()}.png")
 
 
