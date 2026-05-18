@@ -1,59 +1,40 @@
-"""
-E-Commerce Customer Churn Prediction
-=====================================
-Generates synthetic customer data and trains a Decision Tree classifier
-to predict whether a customer will churn in the next 30 days.
-
-To add more algorithms later, see the MODELS dictionary at the bottom.
-"""
-
 import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
     f1_score, classification_report, confusion_matrix
 )
 from sklearn.preprocessing import StandardScaler
-import pickle
-import matplotlib.pyplot as plt
-import seaborn as sns
 import matplotlib
 matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pickle
+import warnings
+warnings.filterwarnings("ignore")
+
 
 # ─────────────────────────────────────────
-# 1. GENERATE SYNTHETIC DATA
+# 1. GENERATE DATA
 # ─────────────────────────────────────────
 
-def generate_data(n_customers=1000, random_state=42):
-    """
-    Generate realistic fake customer data for churn prediction.
-
-    Features (RFM + extras):
-      - recency_days       : days since last purchase
-      - frequency          : number of purchases in last 6 months
-      - monetary           : total amount spent (USD)
-      - avg_order_value    : average value per order
-      - num_returns        : number of returned items
-      - email_open_rate    : fraction of marketing emails opened (0–1)
-      - days_since_signup  : how long they've been a customer
-
-    Target:
-      - churned            : 1 if customer churned, 0 if not
-    """
+def generate_data(n_customers=100000, random_state=42):
     rng = np.random.default_rng(random_state)
     n = n_customers
 
-    recency_days     = rng.integers(1, 365, n)
-    frequency        = rng.integers(1, 50, n)
-    monetary         = rng.uniform(10, 5000, n).round(2)
-    avg_order_value  = (monetary / frequency).round(2)
-    num_returns      = rng.integers(0, 10, n)
-    email_open_rate  = rng.uniform(0, 1, n).round(2)
-    days_since_signup= rng.integers(30, 1825, n)
+    recency_days      = rng.integers(1, 365, n)
+    frequency         = rng.integers(1, 50, n)
+    monetary          = rng.uniform(10, 5000, n).round(2)
+    avg_order_value   = (monetary / frequency).round(2)
+    num_returns       = rng.integers(0, 10, n)
+    email_open_rate   = rng.uniform(0, 1, n).round(2)
+    days_since_signup = rng.integers(30, 1825, n)
 
-    # Churn logic: high recency, low frequency, low email engagement → more likely to churn
     churn_score = (
         0.4 * (recency_days / 365) +
         0.3 * (1 - frequency / 50) +
@@ -104,9 +85,11 @@ def prepare_data(df):
 # ─────────────────────────────────────────
 
 MODELS = {
-    "Decision Tree": DecisionTreeClassifier(max_depth=5, random_state=42),
+    "Decision Tree":       DecisionTreeClassifier(max_depth=5, random_state=42),
+    "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42),
+    "KNN":                 KNeighborsClassifier(n_neighbors=5, algorithm="ball_tree"),
+    "Neural Network":      MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=500, random_state=42),
 }
-
 
 
 # ─────────────────────────────────────────
@@ -120,11 +103,11 @@ def evaluate_model(name, model, X_train, X_test, y_train, y_test):
     cv_scores = cross_val_score(model, X_train, y_train, cv=5, scoring="f1")
 
     results = {
-        "Model":     name,
-        "Accuracy":  accuracy_score(y_test, y_pred),
-        "Precision": precision_score(y_test, y_pred),
-        "Recall":    recall_score(y_test, y_pred),
-        "F1 Score":  f1_score(y_test, y_pred),
+        "Model":      name,
+        "Accuracy":   accuracy_score(y_test, y_pred),
+        "Precision":  precision_score(y_test, y_pred),
+        "Recall":     recall_score(y_test, y_pred),
+        "F1 Score":   f1_score(y_test, y_pred),
         "CV F1 Mean": cv_scores.mean(),
         "CV F1 Std":  cv_scores.std(),
     }
@@ -136,7 +119,7 @@ def evaluate_model(name, model, X_train, X_test, y_train, y_test):
     print(f"  Precision: {results['Precision']:.3f}")
     print(f"  Recall   : {results['Recall']:.3f}")
     print(f"  F1 Score : {results['F1 Score']:.3f}")
-    print(f"  CV F1    : {results['CV F1 Mean']:.3f} ± {results['CV F1 Std']:.3f}")
+    print(f"  CV F1    : {results['CV F1 Mean']:.3f} +/- {results['CV F1 Std']:.3f}")
     print(f"\nClassification Report:\n")
     print(classification_report(y_test, y_pred, target_names=["Not Churned", "Churned"]))
 
@@ -153,13 +136,12 @@ def plot_confusion_matrix(name, y_test, y_pred):
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
                 xticklabels=["Not Churned", "Churned"],
                 yticklabels=["Not Churned", "Churned"])
-    plt.title(f"Confusion Matrix — {name}")
+    plt.title(f"Confusion Matrix - {name}")
     plt.ylabel("Actual")
     plt.xlabel("Predicted")
     plt.tight_layout()
     plt.savefig(f"confusion_matrix_{name.replace(' ', '_').lower()}.png", dpi=150)
-    # plt.show()
-    print(f"Saved: confusion_matrix_{name.replace(' ', '_').lower()}.png")
+    plt.close()
 
 
 def plot_feature_importance(name, model, feature_names):
@@ -172,11 +154,10 @@ def plot_feature_importance(name, model, feature_names):
     plt.bar(range(len(feature_names)), importances[indices], color="steelblue")
     plt.xticks(range(len(feature_names)),
                [feature_names[i] for i in indices], rotation=45, ha="right")
-    plt.title(f"Feature Importances — {name}")
+    plt.title(f"Feature Importances - {name}")
     plt.tight_layout()
     plt.savefig(f"feature_importance_{name.replace(' ', '_').lower()}.png", dpi=150)
-    # plt.show()
-    print(f"Saved: feature_importance_{name.replace(' ', '_').lower()}.png")
+    plt.close()
 
 
 # ─────────────────────────────────────────
@@ -190,8 +171,8 @@ def save_best_model(all_results, trained_models, feature_names):
     with open("best_model.pkl", "wb") as f:
         pickle.dump({"model": best_model, "features": feature_names}, f)
 
-    print(f"\n✅ Best model: {best['Model']} (F1={best['F1 Score']:.3f})")
-    print("   Saved to best_model.pkl")
+    print(f"\nBest model: {best['Model']} (F1={best['F1 Score']:.3f})")
+    print("Saved to best_model.pkl")
     return best_model
 
 
@@ -201,7 +182,7 @@ def save_best_model(all_results, trained_models, feature_names):
 
 if __name__ == "__main__":
     print("Generating synthetic customer data...")
-    df = generate_data(n_customers=10000)
+    df = generate_data(n_customers=100000)
     print(f"Dataset: {len(df)} customers | Churn rate: {df['churned'].mean():.1%}")
     print(df.describe().round(2))
 
@@ -220,14 +201,12 @@ if __name__ == "__main__":
         plot_confusion_matrix(name, y_test, y_pred)
         plot_feature_importance(name, trained_model, feature_names)
 
-    # Summary table
-    print("\n\n📊 RESULTS SUMMARY")
+    print("\n\nRESULTS SUMMARY")
     print("=" * 60)
     summary = pd.DataFrame(all_results).set_index("Model")
     print(summary[["Accuracy", "Precision", "Recall", "F1 Score", "CV F1 Mean"]].round(3))
 
     save_best_model(all_results, trained_models, feature_names)
 
-    # Save dataset for inspection / web app use
     df.to_csv("customer_data.csv", index=False)
-    print("\n📁 customer_data.csv saved.")
+    print("customer_data.csv saved.")
