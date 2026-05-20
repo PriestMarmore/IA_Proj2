@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore")
 # 1. GENERATE DATA
 # ─────────────────────────────────────────
 
-def generate_data(n_customers=100000, random_state=42):
+def generate_data(n_customers=500, random_state=42):
     rng = np.random.default_rng(random_state)
     n = n_customers
 
@@ -182,7 +182,7 @@ def save_best_model(all_results, trained_models, feature_names):
 
 if __name__ == "__main__":
     print("Generating synthetic customer data...")
-    df = generate_data(n_customers=100000)
+    df = generate_data(n_customers=500)
     print(f"Dataset: {len(df)} customers | Churn rate: {df['churned'].mean():.1%}")
     print(df.describe().round(2))
 

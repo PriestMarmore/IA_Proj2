@@ -1,18 +1,10 @@
-"""
-E-Commerce Churn Prediction — Streamlit Web App
-=================================================
-Run with:
-    streamlit run app.py
-
-Make sure best_model.pkl and customer_data.csv are in the same folder.
-"""
-
 import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 
 # ─────────────────────────────────────────
 # PAGE CONFIG
@@ -23,6 +15,7 @@ st.set_page_config(
     page_icon="📦",
     layout="wide",
 )
+
 
 # ─────────────────────────────────────────
 # LOAD MODEL & DATA
@@ -45,27 +38,30 @@ except FileNotFoundError as e:
     st.error(f"Missing file: {e}. Make sure you run ChurnModel.py first.")
     st.stop()
 
+
 # ─────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────
 
-st.title("📦 ChurnSight")
+st.title("ChurnSight")
 st.markdown("#### E-Commerce Customer Churn Prediction Dashboard")
+st.markdown(f"Model: **{type(model).__name__}**")
 st.markdown("---")
+
 
 # ─────────────────────────────────────────
 # TABS
 # ─────────────────────────────────────────
 
-tab1, tab2 = st.tabs(["🔮 Predict Customer", "📊 Dataset Overview"])
+tab1, tab2 = st.tabs(["Predict Customer", "Dataset Overview"])
 
-# ═══════════════════════════════════════════
-# TAB 1 — PREDICT
-# ═══════════════════════════════════════════
+
+# ─────────────────────────────────────────
+# TAB 1 - PREDICT
+# ─────────────────────────────────────────
 
 with tab1:
     st.subheader("Enter Customer Details")
-    st.markdown("Fill in the customer's profile to predict their churn risk.")
 
     col1, col2 = st.columns(2)
 
@@ -102,7 +98,7 @@ with tab1:
 
     st.markdown("---")
 
-    if st.button("🔮 Predict Churn Risk", use_container_width=True):
+    if st.button("Predict Churn Risk", use_container_width=True):
         input_data = pd.DataFrame([{
             "recency_days":      recency_days,
             "frequency":         frequency,
@@ -122,23 +118,23 @@ with tab1:
 
         with res_col1:
             if prediction == 1:
-                st.error("⚠️ HIGH CHURN RISK")
+                st.error("HIGH CHURN RISK")
             else:
-                st.success("✅ LOW CHURN RISK")
+                st.success("LOW CHURN RISK")
 
         with res_col2:
             st.metric("Churn Probability", f"{probability:.1%}")
 
         with res_col3:
-            risk_level = (
-                "🔴 High" if probability > 0.7 else
-                "🟡 Medium" if probability > 0.4 else
-                "🟢 Low"
-            )
+            if probability > 0.7:
+                risk_level = "High"
+            elif probability > 0.4:
+                risk_level = "Medium"
+            else:
+                risk_level = "Low"
             st.metric("Risk Level", risk_level)
 
-        # Recommendation
-        st.markdown("#### 💡 Recommended Action")
+        st.markdown("#### Recommended Action")
         if probability > 0.7:
             st.warning(
                 "This customer is very likely to churn. Consider sending a **personalised discount voucher** "
@@ -155,15 +151,15 @@ with tab1:
                 "and monitor their activity."
             )
 
-# ═══════════════════════════════════════════
-# TAB 2 — DATASET OVERVIEW
-# ═══════════════════════════════════════════
+
+# ─────────────────────────────────────────
+# TAB 2 - DATASET OVERVIEW
+# ─────────────────────────────────────────
 
 with tab2:
     st.subheader("Dataset Overview")
     st.markdown(f"Training dataset: **{len(df):,} synthetic customers**")
 
-    # KPI metrics
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Total Customers", f"{len(df):,}")
     m2.metric("Churned", f"{df['churned'].sum():,}", f"{df['churned'].mean():.1%}")
@@ -174,7 +170,6 @@ with tab2:
 
     chart_col1, chart_col2 = st.columns(2)
 
-    # Churn distribution
     with chart_col1:
         st.markdown("**Churn Distribution**")
         fig, ax = plt.subplots(figsize=(4, 3))
@@ -188,12 +183,10 @@ with tab2:
         st.pyplot(fig)
         plt.close()
 
-    # Recency by churn
     with chart_col2:
         st.markdown("**Recency by Churn Status**")
         fig, ax = plt.subplots(figsize=(4, 3))
-        df.boxplot(column="recency_days", by="churned", ax=ax,
-                   patch_artist=True)
+        df.boxplot(column="recency_days", by="churned", ax=ax, patch_artist=True)
         ax.set_title("")
         ax.set_xlabel("Churned (0 = No, 1 = Yes)")
         ax.set_ylabel("Days since last purchase")
@@ -203,7 +196,6 @@ with tab2:
 
     chart_col3, chart_col4 = st.columns(2)
 
-    # Frequency distribution
     with chart_col3:
         st.markdown("**Purchase Frequency Distribution**")
         fig, ax = plt.subplots(figsize=(4, 3))
@@ -216,7 +208,6 @@ with tab2:
         st.pyplot(fig)
         plt.close()
 
-    # Email open rate vs churn
     with chart_col4:
         st.markdown("**Email Open Rate by Churn Status**")
         fig, ax = plt.subplots(figsize=(4, 3))
